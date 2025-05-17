@@ -193,7 +193,7 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
     // Double-clicking on a transaction on the transaction history page shows details
     connect(this, &TransactionView::doubleClicked, this, &TransactionView::showDetails);
     // Highlight transaction after fee bump
-    connect(this, &TransactionView::bumpedFee, [this](const uint256& txid) {
+    connect(this, &TransactionView::bumpedFee, [this](const Txid& txid) {
       focusTransaction(txid);
     });
 }
@@ -241,11 +241,8 @@ void TransactionView::setModel(WalletModel *_model)
             }
         }
 
-        // show/hide column Watch-only
-        updateWatchOnlyColumn(_model->wallet().haveWatchOnly());
-
-        // Watch-only signal
-        connect(_model, &WalletModel::notifyWatchonlyChanged, this, &TransactionView::updateWatchOnlyColumn);
+        // hide column Watch-only
+        updateWatchOnlyColumn(false);
     }
 }
 
@@ -368,8 +365,6 @@ void TransactionView::exportClicked()
     // name, column, role
     writer.setModel(transactionProxyModel);
     writer.addColumn(tr("Confirmed"), 0, TransactionTableModel::ConfirmedRole);
-    if (model->wallet().haveWatchOnly())
-        writer.addColumn(tr("Watch-only"), TransactionTableModel::Watchonly);
     writer.addColumn(tr("Date"), 0, TransactionTableModel::DateRole);
     writer.addColumn(tr("Type"), TransactionTableModel::Type, Qt::EditRole);
     writer.addColumn(tr("Label"), 0, TransactionTableModel::LabelRole);
@@ -436,7 +431,7 @@ void TransactionView::bumpFee([[maybe_unused]] bool checked)
     Txid hash = Txid::FromHex(hashQStr.toStdString()).value();
 
     // Bump tx fee over the walletModel
-    uint256 newHash;
+    Txid newHash;
     if (model->bumpFee(hash, newHash)) {
         // Update the table
         transactionView->selectionModel()->clearSelection();
@@ -604,7 +599,7 @@ void TransactionView::focusTransaction(const QModelIndex &idx)
     transactionView->setFocus();
 }
 
-void TransactionView::focusTransaction(const uint256& txid)
+void TransactionView::focusTransaction(const Txid& txid)
 {
     if (!transactionProxyModel)
         return;
