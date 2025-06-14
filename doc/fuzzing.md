@@ -19,7 +19,7 @@ One can use `--preset=libfuzzer-nosan` to do the same without common sanitizers 
 See [further](#run-without-sanitizers-for-increased-throughput) for more information.
 
 There is also a runner script to execute all fuzz targets. Refer to
-`./test/fuzz/test_runner.py --help` for more details.
+`./build_fuzz/test/fuzz/test_runner.py --help` for more details.
 
 ## Overview of Bitcoin Core fuzzing
 
@@ -217,7 +217,7 @@ $ cd bitcoin/
 $ git clone https://github.com/AFLplusplus/AFLplusplus
 $ make -C AFLplusplus/ source-only
 # If afl-clang-lto is not available, see
-# https://github.com/AFLplusplus/AFLplusplus#a-selecting-the-best-afl-compiler-for-instrumenting-the-target
+# https://github.com/AFLplusplus/AFLplusplus/blob/stable/docs/fuzzing_in_depth.md#a-selecting-the-best-afl-compiler-for-instrumenting-the-target
 $ cmake -B build_fuzz \
    -DCMAKE_C_COMPILER="$(pwd)/AFLplusplus/afl-clang-lto" \
    -DCMAKE_CXX_COMPILER="$(pwd)/AFLplusplus/afl-clang-lto++" \
@@ -225,6 +225,8 @@ $ cmake -B build_fuzz \
 $ cmake --build build_fuzz
 # For macOS you may need to ignore x86 compilation checks when running "cmake --build". If so,
 # try compiling using: AFL_NO_X86=1 cmake --build build_fuzz
+# Also, it might be required to run "afl-system-config" to adjust the shared
+# memory parameters.
 $ mkdir -p inputs/ outputs/
 $ echo A > inputs/thin-air-input
 $ FUZZ=bech32 ./AFLplusplus/afl-fuzz -i inputs/ -o outputs/ -- build_fuzz/bin/fuzz
