@@ -19,6 +19,7 @@ Table of Contents
    * [More conflict context with `merge.conflictstyle diff3`](#more-conflict-context-with-mergeconflictstyle-diff3)
 * [Reviewing code](#reviewing-code)
    * [Reduce mental load with `git diff` options](#reduce-mental-load-with-git-diff-options)
+   * [Fetch commits directly](#fetch-commits-directly)
    * [Reference PRs easily with `refspec`s](#reference-prs-easily-with-refspecs)
    * [Diff the diffs with `git range-diff`](#diff-the-diffs-with-git-range-diff)
 
@@ -51,8 +52,6 @@ You _must not_ set base_dir to "/", or anywhere that contains system headers (ac
 During the generation of the build system only essential build options are enabled by default to save on compilation time.
 
 Run `cmake -B build -LH` to see the full list of available options. GUI tools, such as `ccmake` and `cmake-gui`, can be also helpful.
-
-If you do need the wallet enabled (`-DENABLE_WALLET=ON`), it is common for devs to use your system bdb version for the wallet, so you don't have to find a copy of bdb 4.8. Wallets from such a build will be incompatible with any release binary (and vice versa), so use with caution on mainnet.
 
 ### Make use of your threads with `-j`
 
@@ -166,9 +165,17 @@ When reviewing patches that change symbol names in many places, use `git diff --
 
 When reviewing patches that move code around, try using `git diff --patience commit~:old/file.cpp commit:new/file/name.cpp`, and ignoring everything except the moved body of code which should show up as neither `+` or `-` lines. In case it was not a pure move, this may even work when combined with the `-w` or `--word-diff` options described above. `--color-moved=dimmed-zebra` will also dim the coloring of moved hunks in the diff on compatible terminals.
 
+### Fetch commits directly
+
+Before inspecting any remotely created commit locally, it has to be fetched.
+This is possible via `git fetch origin <full_commit_hash>`. Even commits not
+part of any branch or tag can be fetched as long as the remote has not garbage
+collected them.
+
+
 ### Reference PRs easily with `refspec`s
 
-When looking at other's pull requests, it may make sense to add the following section to your `.git/config` file:
+As an alternative to fetching commits directly, when looking at pull requests by others, it may make sense to add the following section to your `.git/config` file:
 
 ```
 [remote "upstream-pull"]
@@ -177,6 +184,37 @@ When looking at other's pull requests, it may make sense to add the following se
 ```
 
 This will add an `upstream-pull` remote to your git repository, which can be fetched using `git fetch --all` or `git fetch upstream-pull`. It will download and store on disk quite a lot of data (all PRs, including merged and closed ones). Afterwards, you can use `upstream-pull/NUMBER/head` in arguments to `git show`, `git checkout` and anywhere a commit id would be acceptable to see the changes from pull request NUMBER.
+
+### Fetch and update PRs individually
+
+The refspec remote is quite resource-heavy, and it is possible to fetch PRs singularly from the remote. To do this you can run:
+
+```bash
+# Individual fetch
+git fetch upstream pull/<number>/head
+
+# Fetch with automatic branch creation and switch
+git fetch upstream pull/<number>/head:pr-<number> && git switch pr-<number>
+```
+
+...from the command line, substituting `<number>` with the PR number you want to fetch/update.
+
+> [!NOTE]
+> The remote named "upstream" here must be the one that the pull request was opened against.
+> e.g. github.com/bitcoin/bitcoin.git or for the GUI github.com/bitcoin-core/gui
+
+Make these easier to use by adding aliases to your git config:
+
+```
+[alias]
+    # Fetch a single Pull Request and switch to it in a new branch, with `git pr 12345`
+    pr = "!f() { git fetch upstream pull/$1/head:pr-$1 && git switch pr-$1; }; f";
+
+    # Update a Pull Request branch, even after a force push, and even if checked out, with `git pru 12345`
+    pru = "!f() { git fetch --update-head-ok -f upstream pull/$1/head:pr-$1; }; f";
+```
+
+Then a simple `git pr 12345` will fetch and check out that pr from upstream.
 
 ### Diff the diffs with `git range-diff`
 
@@ -196,7 +234,7 @@ You can do:
 git range-diff master previously-reviewed-head new-head
 ```
 
-Note that `git range-diff` also work for rebases:
+Note that `git range-diff` also works for rebases:
 
 ```
        P1--P2--P3--P4--P5   <-- previously-reviewed-head
